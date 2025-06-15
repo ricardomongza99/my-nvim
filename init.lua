@@ -984,7 +984,7 @@ require('lazy').setup({
   --    This is the easiest way to modularize your config.
   --
   --  Uncomment the following line and add your plugins to `lua/custom/plugins/*.lua` to get going.
-  -- { import = 'custom.plugins' },
+  { import = 'custom.plugins' },
   --
   -- For additional information with loading, sourcing and examples see `:help lazy.nvim-🔌-plugin-spec`
   -- Or use telescope!
@@ -1014,3 +1014,66 @@ require('lazy').setup({
 
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
+
+-- TODO: Move custom configs to separate files
+
+-- My custom configurations
+
+-- Do not continue comment on new line
+vim.cmd 'autocmd BufEnter * set formatoptions-=cro'
+vim.cmd 'autocmd BufEnter * setlocal formatoptions-=cro'
+
+-- Switch buffers
+vim.keymap.set('n', '<Tab>', ':bnext<CR>', { desc = 'Next Buffer' })
+vim.keymap.set('n', '<S-Tab>', ':bprevious<CR>', { desc = 'Previous Buffer' })
+
+-- Builds
+vim.opt.makeprg = 'cmake --build build'
+
+vim.keymap.set('n', '<leader>cc', function()
+  vim.cmd '!cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON'
+  print '🔄 compile_commands.json updated!'
+end, { desc = '[C]Make: Update compile_commands.json ' })
+
+local function find_executable()
+  -- Find only macOS executable inside `build/`
+  local handle = io.popen 'find build -type f -perm +111' -- Find files with exec
+  if not handle then
+    print '⚠️ Error: Could not execute command.'
+    return nil
+  end
+
+  local exec = handle:read '*l' -- Read first result
+  handle:close()
+
+  if exec and exec ~= '' then
+    return exec
+  else
+    print '⚠️ No exectuable found in build/. Did you build the project?'
+    return nil
+  end
+end
+
+vim.keymap.set('n', '<leader>m', function()
+  vim.cmd 'make' -- Run `:make` (compiles the project
+  vim.cmd 'silent! redraw!' -- Skip the "Press ENTER" prompt
+
+  -- Check if there are compilation errors
+  -- local errors = vim.fn.getqflist()
+  -- if #errors > 0 then
+  --   vim.cmd 'copen' -- Open the quickfix list to show errors
+  --   print '❌ Compilation failed. Check quickfix list.'
+  --   return
+  -- end
+
+  -- Check if there are compilation errors
+  local exec = find_executable()
+  if exec then
+    vim.cmd('! ' .. exec) -- Run the executable
+  else
+    print '⚠️ No executable found in build/.'
+  end
+end, { desc = '[M]ake & Run' })
+
+vim.bo.tabstop = 4
+vim.bo.shiftwidth = 4
